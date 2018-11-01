@@ -1,0 +1,24 @@
+{
+    "name": "Content-Type Fixer",
+    "description": "Override dumb Content-Type headers (initially zip, rtf, pdf, acsm)",
+    "version": "0.2",
+    "manifest_version": 2,
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    "permissions": [
+        "<all_urls>",
+        "webRequest",
+        "webRequestBlocking"
+    ],
+	"browser_action": {
+		"browser_style": true,
+		"default_icon": {
+			"16": "icons/hammer-16-Zzzz.png",
+			"32": "icons/hammer-32-Zzzz.png"
+		},
+		"default_title": "Turn Content-Type Fixer ON"
+	}
+}
