@@ -1,6 +1,7 @@
 /* 
   Copyright 2018. Jefferson "jscher2000" Scher. License: MPL-2.0.
-  v0.2 - initial design; uses some code from https://github.com/samlh/display-inline
+  v0.2 - initial design; uses some code from https://github.com/samlh/display-inline (MIT)
+  v0.3 - fix unquoted filename's (old ASP on IIS issue)
 */
 
 let nowlistening = false;
@@ -8,8 +9,16 @@ let nowlistening = false;
 // TODO: The following should be built out more and user-extensible
 let trueCT = [
 	{ ext: "acsm", ct: "application/vnd.adobe.adept+xml" },
+	{ ext: "doc", ct: "application/msword" },
+	{ ext: "docx", ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+	{ ext: "epub", ct: "application/epub+zip" },
 	{ ext: "pdf", ct: "application/pdf" },
+	{ ext: "ppt", ct: "application/vnd.ms-powerpoint" },
+	{ ext: "pptx", ct: "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
+	{ ext: "psd", ct: "application/vnd.adobe.photoshop" },
 	{ ext: "rtf", ct: "application/rtf" },
+	{ ext: "xls", ct: "application/vnd.ms-excel" },
+	{ ext: "xlsx", ct: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
 	{ ext: "zip", ct: "application/zip" }
 ];
 
@@ -39,12 +48,19 @@ function fixCT(details) {
 	// check for filename in content disposition header (e.g., 'attachment; filename="blahblah.doc"')
 	if (contentDispositionHeader) {
 		let sections = contentDispositionHeader.value.split(";");
-		for (let section of sections) {
-			var parts = section.split("=", 2);
-			var key = parts[0].trim();
-			if (key == "filename" || key == "filename*") {
+		for (var i=0; i<sections.length; i++) {
+			var parts = sections[i].split("=", 2);
+			if (parts[0].trim().indexOf('filename') === 0) {
 				filename = parts[1].trim();
-				if (filename.endsWith("\"")) filename = filename.slice(0, -1);
+				if (filename.endsWith('"')) filename = filename.slice(0, -1);
+				else if (filename.indexOf(' ') > -1) { 
+					// quote the filename (fix for bad IIS ASP code)
+					console.log('(fixing quotation marks around filename)');
+					if (filename.startsWith('"')) parts[1] = parts[1].replace(filename, filename + '"');
+					else parts[1] = parts[1].replace(filename, '"' + filename + '"');
+					sections[i] = parts.join('=');
+					contentDispositionHeader.value = sections.join(';');
+				}
 				console.log('filename from content-disposition => ' + filename);
 				break;
 			}
@@ -52,20 +68,21 @@ function fixCT(details) {
 	}
 	// if there's no discernible file name or file extension, exit now
 	if (filename === '' || filename.lastIndexOf('.') < 0) return { responseHeaders: details.responseHeaders };
-	// check file extension
+	
+	// check file extension for known content-type
 	let fileext = filename.substr(filename.lastIndexOf('.')+1);
 	console.log('fileext => ' + fileext);
-	let newCT = trueCT.find( objCT => objCT.ext === fileext ).ct;
+	let newCT = trueCT.find( objCT => objCT.ext === fileext );
 
 	// if we don't have anything to do, we're done
-	if (newCT === 'undefined') return { responseHeaders: details.responseHeaders };
+	if (newCT === undefined) return { responseHeaders: details.responseHeaders };
 	
 	// fix the header
-	console.log('newCT => ' + newCT);
-	if (contentTypeHeader) contentTypeHeader.value = newCT;
-	else details.responseHeaders.push({ name: "Content-Type", value: newCT });
-
-	// dispatch
+	console.log('newCT.ct => ' + newCT.ct);
+	if (contentTypeHeader) contentTypeHeader.value = newCT.ct;
+	else details.responseHeaders.push({ name: "Content-Type", value: newCT.ct });
+	
+	// dispatch headers, we're done
 	return { responseHeaders: details.responseHeaders };
 }
 
@@ -121,3 +138,5 @@ function setButton(){
 		browser.browserAction.setTitle({title: 'Turn Content-Type Fixer ON'});
 	}
 }
+
+// TODO context menu, options page
