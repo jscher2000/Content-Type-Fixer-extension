@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" href="logaddnew.css" type="text/css">
+<title>Header Log - Content-Type Fixer</title>
+</head>
+<body>
+<h1>Log of Recent Requests</h1>
+<p>Use the Add and Edit buttons to define or redefine a file extension - Content-Type association.</p>
+<div id="log">
+<table id="CTLog" border="0" cellspacing="0" cellpadding="0" style="width: 100%">
+<thead>
+	<tr>
+		<td style="width:15%">Date/Time <button id="btnRefresh">Refresh Log</button></td>
+		<td style="width:35%">URL</td>
+		<td style="width:8%">Ext.</td>
+		<td style="width:42%">Action</td>
+	</tr>
+</thead>
+<tbody id="logbody">
+</tbody>
+</table>
+</div>
+</body>
+<script type="text/javascript" src="logaddnew.js"></script>
+<template id="frmAdd">
+	<form>
+		<div class="addedit" fext="">
+			<h2>Add a Content-Type for .<span class="fext"></span></h2>
+			<p><label><input type="radio" name="ctType" value="fext" checked>&nbsp;<span class="string">application/x-<span class="fext"></span>file</span> (fictitious)</label><br>
+			<input type="radio" name="ctType" value="cust">&nbsp;<input type="text" name="customCT" size="40" placeholder="application/whatever" value="">
+			<button type="button" class="reset">Reset</button></p>
+			<p><em>Research on</em> <a href="http://filext.com/file-extension/%s" target="_blank" rel="noreferrer">FILExt</a> or 
+			<a href="https://www.google.com/search?q=(mime%20OR%20content)+file+extension+%22%s%22" target="_blank" rel="noreferrer">Google</a><br>
+			<p><button type="button" class="addbtn">Save Content-Type</button></p>
+			<p class="warning" style="display:none">Log entry obsolete. Please try the download again to test your change.</p>
+		</div>
+	</form>
+</template>
+<template id="frmEdit">
+	<form>
+		<div class="addedit" fext="">
+			<h2>Modify Content-Type for .<span class="fext"></span></h2>
+			<p><label><input type="radio" name="ctType" value="fext" checked>&nbsp;<span class="string">application/x-<span class="fext"></span>file</span> (fictitious)</label><br>
+			<span style="display:none" class="builtinspan"><label><input type="radio" name="ctType" value="built">&nbsp;<span class="string"></span> (built-in)</label><br></span>
+			<input type="radio" name="ctType" value="cust">&nbsp;<input type="text" name="customCT" size="40" placeholder="application/whatever" value="">
+			<button type="button" class="reset">Reset</button></p>
+			<p><em>Research on</em> <a href="http://filext.com/file-extension/%s" target="_blank" rel="noreferrer">FILExt</a> or 
+			<a href="https://www.google.com/search?q=(mime%20OR%20content)+file+extension+%22%s%22" target="_blank" rel="noreferrer">Google</a></p>
+			<p><button type="button" class="modbtn">Update Content-Type</button> 
+			<button type="button" class="delbtn">Delete Content-Type</button></p>
+			<p class="warning" style="display:none">Log entry obsolete. Please try the download again to test your change.</p>
+		</div>
+	</form>
+</template>
+</html>

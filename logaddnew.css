@@ -1,0 +1,44 @@
+body {
+	background-color: #f4f4f4;
+	font-family: sans-serif;
+}
+p, td {
+	font-size: 1.1em;
+}
+/* Log Table */
+#CTLog {
+	border-collapse: collapse;
+}
+#CTLog td {
+	border: 1px solid #000;
+	vertical-align: top;
+	padding: 4px;
+}
+#CTLog thead td {
+	font-weight: bold;
+}
+.grayed {
+	color: #888;
+}
+#btnRefresh {
+	font-size: 0.75em;
+	float: right;
+}
+h2 {
+	font-size: 1.25em;
+}
+.addedit {
+	margin: 6px;
+	border: 1px solid #cef;
+	border-radius: 16px;
+	background-color: #def;
+	padding: 0px 20px;
+}
+.addedit p, .addedit input {
+	font-size: 0.9em;
+}
+.warning {
+	color: #eee;
+	background: #f88;
+	padding: 2px 8px;
+}
