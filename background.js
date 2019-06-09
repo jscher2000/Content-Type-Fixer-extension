@@ -1,8 +1,9 @@
 /* 
-  Copyright 2018. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2019. Jefferson "jscher2000" Scher. License: MPL-2.0.
   v0.2 - initial design; uses some code from https://github.com/samlh/display-inline (MIT)
   v0.3 - fix unquoted filename's (old ASP on IIS issue)
   v1.0 - log script actions while listening (not stored); adding/editing associations
+  v1.1 - content-disposition override (initial support), autostart option
 */
 
 let nowlistening = false;
@@ -47,6 +48,29 @@ function updateCT(){
 }
 updateCT();
 
+// Preferences
+let oPrefs = {
+	intLogExpiration: 300,		// Seconds after which log entries expire (default to 5 minutes)
+	dispoAction: 'browser',		// Content-disposition: 'browser' (do not override), 'inline', 'attachment'
+	autostart: false			// Whether to start listening when the extension initializes
+};
+// Update oPrefs from storage
+function updatePref(){
+	browser.storage.local.get("userprefs").then((results) => {
+		if (results.userprefs != undefined){
+			if (JSON.stringify(results.userprefs) != '{}'){
+				var arrSavedPrefs = Object.keys(results.userprefs)
+				for (var j=0; j<arrSavedPrefs.length; j++){
+					oPrefs[arrSavedPrefs[j]] = results.userprefs[arrSavedPrefs[j]];
+				}
+			}
+		}
+	}).then(function(){
+		if (oPrefs.autostart) startListening();
+	}).catch((err) => {console.log('Error retrieving storage: '+err.message);});
+}
+updatePref();
+
 /**** Fix Headers of Intercepted Responses ****/
 function fixCT(details) { 
 	// extract the Content-Type and Content-Disposition headers if present
@@ -70,25 +94,37 @@ function fixCT(details) {
 		if (filename.indexOf('#') > -1) filename = filename.substr(0, filename.indexOf('#'));
 	}
 	// check for filename in content disposition header (e.g., 'attachment; filename="blahblah.doc"')
+	let cdaction = '';
 	if (contentDispositionHeader) {
 		let sections = contentDispositionHeader.value.split(";");
 		for (var i=0; i<sections.length; i++) {
 			var parts = sections[i].split("=", 2);
-			if (parts[0].trim().indexOf('filename') === 0) {
+			if (parts[0].trim().toLowerCase().indexOf('filename') === 0) {
 				filename = parts[1].trim();
 				if (filename.endsWith('"')) filename = filename.slice(0, -1);
 				else if (filename.indexOf(' ') > -1) { 
 					// quote the filename (fix for bad IIS ASP code)
-					console.log('(fixing quotation marks around filename [' + filename + '])');
+					cdaction += '<br>C-D: Filename quoted due to spaces';
 					if (filename.startsWith('"')) parts[1] = parts[1].replace(filename, filename + '"');
 					else parts[1] = parts[1].replace(filename, '"' + filename + '"');
 					sections[i] = parts.join('=');
-					contentDispositionHeader.value = sections.join(';');
 				}
 				// console.log('filename from content-disposition => ' + filename);
-				break;
+			} else {
+				console.log('sections[i]='+sections[1]);
+				if (oPrefs.dispoAction != 'browser'){
+					if (sections[i].trim().toLowerCase() != oPrefs.dispoAction){
+						cdaction += '<br>C-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
+						sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
+					}
+				}
 			}
 		}
+		contentDispositionHeader.value = sections.join(';');
+	} else if (oPrefs.dispoAction == 'attachment'){
+		// TODO Should we limit this by content type??
+		details.responseHeaders.push({ name: 'Content-Disposition', value: 'attachment' });
+		cdaction = '<br>C-D: Forced to attachment';
 	}
 	// if there's no discernible file name or file extension, exit now
 	if (filename === '' || filename.lastIndexOf('.') < 0){
@@ -96,7 +132,7 @@ function fixCT(details) {
 			time: Date.now(),
 			url: details.url + ' (' + details.type + ')',
 			extension: '',
-			action: 'N/A - file extension unavailable'
+			action: 'C-T: N/A - file extension unavailable' + cdaction
 		});
 		return { responseHeaders: details.responseHeaders };
 	}
@@ -113,14 +149,14 @@ function fixCT(details) {
 					time: Date.now(),
 					url: details.url + ' (' + details.type + ')',
 					extension: fileext,
-					action: 'None - no association for extension; current CT is "' + contentTypeHeader.value + '"'
+					action: 'C-T: No Action - no association for extension; current CT is "' + contentTypeHeader.value + '"' + cdaction
 				});
 			} else {
 				fixCTlog.enqueue({
 					time: Date.now(),
 					url: details.url + ' (' + details.type + ')',
 					extension: fileext,
-					action: 'None - no association for extension; CT absent'
+					action: 'C-T: No Action - no association for extension; CT absent' + cdaction
 				});
 			}
 			return { responseHeaders: details.responseHeaders };
@@ -133,7 +169,7 @@ function fixCT(details) {
 					time: Date.now(),
 					url: details.url + ' (' + details.type + ')',
 					extension: fileext,
-					action: 'Updated CT header from "' + contentTypeHeader.value + '" to "' + newCT.ct + '"'
+					action: 'C-T: Updated CT header from "' + contentTypeHeader.value + '" to "' + newCT.ct + '"' + cdaction
 				});
 				contentTypeHeader.value = newCT.ct;
 			} else {
@@ -141,7 +177,7 @@ function fixCT(details) {
 					time: Date.now(),
 					url: details.url + ' (' + details.type + ')',
 					extension: fileext,
-					action: 'None - CT already set to "' + contentTypeHeader.value + '"'
+					action: 'C-T: No Action - CT already set to "' + contentTypeHeader.value + '"' + cdaction
 				});
 			}
 		} else {
@@ -150,7 +186,7 @@ function fixCT(details) {
 				time: Date.now(),
 				url: details.url + ' (' + details.type + ')',
 				extension: fileext,
-				action: 'Created CT header with value "' + newCT.ct + '"'
+				action: 'C-T: Created CT header with value "' + newCT.ct + '"' + cdaction
 			});
 		}
 	} else {
@@ -158,7 +194,7 @@ function fixCT(details) {
 			time: Date.now(),
 			url: details.url + ' (' + details.type + ')',
 			extension: fileext,
-			action: 'N/A - "' + details.statusLine + '"'
+			action: 'C-T: N/A - "' + details.statusLine + '"' + cdaction
 		});
 	}
 	
@@ -174,23 +210,27 @@ browser.browserAction.onClicked.addListener((currTab) => {
 		browser.browserAction.openPopup();
 	} else { 				// Enable listening/logging/popup
 		// Create listener
-		browser.webRequest.onHeadersReceived.addListener(
-			fixCT,
-			{
-				urls: ["<all_urls>"],
-				types: ["main_frame", "sub_frame", "other"]
-			},
-			["blocking", "responseHeaders"]
-		);		
-		nowlistening = true;
-		// Update toolbar button
-		setButton();
-		// Create a new log
-		fixCTlog = new Queue();
-		// Change button behavior to show popup
-		browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')});
+		startListening();
 	}
 });
+
+function startListening(){
+	browser.webRequest.onHeadersReceived.addListener(
+		fixCT,
+		{
+			urls: ["<all_urls>"],
+			types: ["main_frame", "sub_frame", "other"]
+		},
+		["blocking", "responseHeaders"]
+	);		
+	nowlistening = true;
+	// Update toolbar button
+	setButton();
+	// Create a new log
+	fixCTlog = new Queue();
+	// Change button behavior to show popup
+	browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')});
+}
 
 // when a window is focused, make sure it has the correct button
 browser.windows.onFocusChanged.addListener((wid) => {
@@ -240,12 +280,11 @@ function handleMessage(request, sender, sendResponse) {
 			var creating = browser.tabs.create({ url: '/logaddnew.html' });
 			return true;
 		}
-	} else if ('want' in request) {						// Return log to log page
-		if (request.want == "log") {
+	} else if ('want' in request) {
+		if (request.want == "log") {					// Return log to log page
 			if (Object.keys(fixCTlog).length > 0) {
-				/* 	This may be the place to expire old entries? TODO
-					expireQ(fixCTlog, 'time', 300);
-				*/
+				// Expire old entries
+				expireQ(fixCTlog, 'time', oPrefs.intLogExpiration);
 				sendResponse({
 					logarray: fixCTlog.lifo()
 				});
@@ -256,12 +295,23 @@ function handleMessage(request, sender, sendResponse) {
 			}
 			return true;
 		}
-		if (request.want == "CTarray") {
+		if (request.want == "CTarray") {				// Return trueCT to log page
 			sendResponse({
 				CTarray: trueCT
 			});
 			return true;
 		}
+		if (request.want == "prefs") {					// Return oPrefs to popup
+			sendResponse({
+				prefs: oPrefs
+			});
+			return true;
+		}
+	} else if ('prefupdate' in request){
+		// Take what the popup sends us, assume it's valid
+		oPrefs = request.prefupdate;
+		browser.storage.local.set({userprefs: oPrefs})
+			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
 	} else if ('update' in request) {
 		// receive CT update, store to customCT and commit to storage, update trueCT
 		var oChange = request['update'];
@@ -381,7 +431,7 @@ function Queue(){
 	}
 }
 
-// Clear expired items; default to 5 minutes (JFS 17 Nov. 2018) (not called in v1.0)
+// Clear expired items; default to 5 minutes
 
 function expireQ(oQueue, strTimeProp, intSecs){
 	// Check the parameters

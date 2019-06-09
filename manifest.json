@@ -1,23 +1,23 @@
 {
-    "name": "Content-Type Fixer",
-    "description": "Override dumb Content-Type headers to fix download problems",
-    "version": "1.0",
-    "manifest_version": 2,
+	"name": "Content-Type Fixer",
+	"description": "Override dumb Content-Type headers to fix download problems",
+	"version": "1.1",
+	"manifest_version": 2,
 	"applications":{
 		"gecko": {
 			"id": "{ff75dc6a-251e-42e2-955d-b33dd660a54c}",
 			"strict_min_version": "60.0"
 		}
 	},
-    "background": {
-        "scripts": [
-            "background.js"
-        ]
-    },
-    "permissions": [
-        "<all_urls>",
-        "webRequest",
-        "webRequestBlocking",
+	"background": {
+		"scripts": [
+			"background.js"
+		]
+	},
+	"permissions": [
+		"<all_urls>",
+		"webRequest",
+		"webRequestBlocking",
 		"storage"
     ],
 	"browser_action": {

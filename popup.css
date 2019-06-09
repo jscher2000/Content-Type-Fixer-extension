@@ -24,3 +24,10 @@ ul li {
 ul li:hover {
 	background-color: #b8d8f8;
 }
+ul li ul li {
+	padding: 2px 4px;
+	margin-left: 10px;
+}
+ul li ul li:hover {
+	background-color: #f8f8b8;
+}

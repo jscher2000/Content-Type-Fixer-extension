@@ -1,6 +1,7 @@
 /* 
-  Copyright 2018. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2019. Jefferson "jscher2000" Scher. License: MPL-2.0.
   v1.0 - added log and add/edit features for customizing content types
+  v1.1 - minor fixes; use template to reduce insertAdjacentHTML
 */
 
 /**** Set up Page -- Get Data from background.js -- Build Table ****/
@@ -13,36 +14,65 @@ function refreshLog(blnClear){
 		var dest = document.querySelector('#logbody');
 		if (blnClear !== false) dest.innerHTML = '';
 		var arrItems = oLog.logarray;
-		if (arrItems){
-			var arrExtensions = [];
+		if (arrItems && arrItems.length > 0){
+			var arrExtensions = []; // track file extensions so only one action button appears per extension
+			var newTR = document.getElementById('newTR'), clone, row, cells;
 			for (var j=0; j<arrItems.length; j++){
-				if (arrItems[j].action.indexOf('N/A - ') == -1){
-					var strTemp = '<tr>';
-				} else {
-					var strTemp = '<tr class="grayed">';
+				clone = document.importNode(newTR.content, true);
+				console.log(clone);
+				// Populate the template
+				row = clone.querySelector('tr');
+				if (arrItems[j].action.indexOf('N/A - ') != -1){
+					row.className = 'grayed';
 				}
-				strTemp += '<td>' + new Date(arrItems[j].time).toLocaleString() + '</td>' +
-					'<td>' + arrItems[j].url + '</td>' +
-					'<td>' + arrItems[j].extension + '</td>' +
-					'<td>' + arrItems[j].action
+				cells = row.querySelectorAll('td');
+				cells[0].textContent = new Date(arrItems[j].time).toLocaleString();
+				cells[1].textContent = arrItems[j].url;
+				cells[2].textContent = arrItems[j].extension;
+				cells[3].querySelector('span').textContent = arrItems[j].action;
 				if (!arrExtensions.includes(arrItems[j].extension)){
+					// Enable either the Add or Edit button
+					cells[3].querySelector('button').setAttribute('fext', arrItems[j].extension);
 					if (arrItems[j].action.indexOf('no association for extension') > -1){
-						strTemp += '<br><button fext="' + arrItems[j].extension + '" fexttype="add" title="Add content-type association">Add</button>'
-					} else if (arrItems[j].action.indexOf('Updated CT header') > -1 || arrItems[j].action.indexOf('Created CT header') > -1 ||
+						// We're all set with the Add button
+					} else {
+						if (arrItems[j].action.indexOf('Updated CT header') > -1 || arrItems[j].action.indexOf('Created CT header') > -1 ||
 							arrItems[j].action.indexOf('CT already set') > -1){
-						strTemp += '<br><button fext="' + arrItems[j].extension + '" fexttype="edit" title="Edit content-type association">Edit</button>'
+							// Switch to an Edit button
+							cells[3].querySelector('button').setAttribute('fexttype', 'edit');
+							cells[3].querySelector('button').setAttribute('title', 'Edit content-type association');
+							cells[3].querySelector('button').textContent = 'Edit';
+						} else {
+							// Remove the Add button?? Not sure how we got here
+							console.log('WTF');
+							cells[3].querySelector('button').remove();
+						}
 					}
 					arrExtensions.push(arrItems[j].extension);
+				} else {
+					// Remove the Add button
+					cells[3].querySelector('button').remove();
 				}
-				dest.insertAdjacentHTML('beforeend', strTemp + '</td></tr>\n');
+				dest.appendChild(clone);
 			}
-		} else {
-			dest.insertAdjacentHTML('afterbegin', '<tr><td colspan="4">Problem getting log: no log data (listening is disabled?)</td></tr>\n');
+		} else { // No log data to show in table, display textual message
+			if (arrItems && arrItems.length > 0){
+				addErrorRow(dest, 'No requests have been logged in the past 5 minutes', 4);
+			} else {
+				addErrorRow(dest, 'No log data (listening is disabled? no downloads yet?)', 4);
+			}
 		}
-	}).catch((err) => {
-		var dest = document.querySelector('#logbody');
-		dest.insertAdjacentHTML('afterbegin', '<tr><td colspan="4">Problem getting log: ' + err.message + '</td></tr>\n');
+	}).catch((err) => { // No log retrieved, display error message from promise
+		addErrorRow(document.querySelector('#logbody'), 'Problem getting log: ' + err.message, 4);
 	});
+}
+function addErrorRow(tgt, msg, intSpan){
+	var cell = document.createElement('td');
+	cell.setAttribute('colspan', intSpan);
+	cell.textContent = msg;
+	var row = document.createElement('tr');
+	row.appendChild(cell);
+	tgt.appendChild(row);
 }
 function getCTarray(){
 	browser.runtime.sendMessage({
