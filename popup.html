@@ -7,16 +7,40 @@
 </head>
 <body>
 <h1>Content-Type Fixer</h1>
-<ul id="ctfmenu">
-	<li id="turnoff">Stop Listening &amp; Clear Log</li>
-	<li id="addnew">Add/Edit Content Types (View Log)</li>
-	<li id="autostart"><span>&#9744;</span>&nbsp;Auto-start with Firefox</li>
-	<li id="dispo" style="cursor: unset;">Content-Disposition Override<ul id="dispoUL">
-		<li id="cdbrowser"><span>&#9744;</span>&nbsp;As set by the server</li>
-		<li id="cdinline"><span>&#9744;</span>&nbsp;Allow viewing in a tab</li>
-		<li id="cdattachment"><span>&#9744;</span>&nbsp;Force downloading</li>
-	</ul></li>
-</ul>
+<div id="mainview">
+	<ul id="ctfmenu">
+		<li id="turnoff">Stop Listening &amp; Clear Log</li>
+		<li id="addnew">Add/Edit Content Types (View Log)</li>
+		<li id="enabledisable" class="hassubview" opens="subview1">Enable/Disable Content Types</li>
+		<li id="autostart"><span>&#9744;</span>&nbsp;Auto-start with Firefox</li>
+		<li id="dispo" style="cursor: unset;">Content-Disposition Override<ul id="dispoUL">
+			<li id="cdbrowser"><span>&#9744;</span>&nbsp;As set by the server</li>
+			<li id="cdinline"><span>&#9744;</span>&nbsp;Allow viewing in a tab</li>
+			<li id="cdattachment"><span>&#9744;</span>&nbsp;Force downloading</li>
+		</ul></li>
+	</ul>
+</div>
+<div id="subview1" class="subview">
+<p class="backtomain" closes="subview1"><img src="img/arrow-left.svg">Back to Main Menu</p>
+<h2>Enable/Disable Content-Type Overrides</h2>
+<table>
+	<thead>
+		<tr>
+			<th>On/Off</th>
+			<th>Extension</th>
+			<th>Content-Type</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+<p class="credit">On and off switches derived from <a href="https://www.onlinewebfonts.com/icon/522367" target="_blank">On Off Switch Toggle Settings Preferences Free Icon</a> licensed under CC BY 3.0.</p>
+</div>
 </body>
 <script type="text/javascript" src="popup.js"></script>
+<template id="newTR">
+	<tr>
+		<td>&nbsp;</td><td></td><td></td>
+	</tr>
+</template>
 </html>

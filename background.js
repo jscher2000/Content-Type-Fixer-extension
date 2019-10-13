@@ -4,6 +4,7 @@
   v0.3 - fix unquoted filename's (old ASP on IIS issue)
   v1.0 - log script actions while listening (not stored); adding/editing associations
   v1.1 - content-disposition override (initial support), autostart option
+  v1.5 - ability to enable/disable individual Content-Type overrides
 */
 
 let nowlistening = false;
@@ -12,20 +13,20 @@ let fixCTlog = {};
 /**** Create and populate data structure ****/
 // Default starting values
 let trueCT = [
-	{ ext: "acsm", ct: "application/vnd.adobe.adept+xml", builtin: true },
-	{ ext: "doc", ct: "application/msword", builtin: true },
-	{ ext: "docx", ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", builtin: true },
-	{ ext: "epub", ct: "application/epub+zip", builtin: true },
-	{ ext: "pdf", ct: "application/pdf", builtin: true },
-	{ ext: "ppt", ct: "application/vnd.ms-powerpoint", builtin: true },
-	{ ext: "pptx", ct: "application/vnd.openxmlformats-officedocument.presentationml.presentation", builtin: true },
-	{ ext: "psd", ct: "application/vnd.adobe.photoshop", builtin: true },
-	{ ext: "rar", ct: "application/vnd.rar", builtin: true },
-	{ ext: "rtf", ct: "application/rtf", builtin: true },
-	{ ext: "xls", ct: "application/vnd.ms-excel", builtin: true },
-	{ ext: "xlsx", ct: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", builtin: true },
-	{ ext: "zip", ct: "application/zip", builtin: true },
-	{ ext: "7z", ct: "application/x-7z-compressed", builtin: true }
+	{ ext: "acsm", ct: "application/vnd.adobe.adept+xml", builtin: true, enabled: true },
+	{ ext: "doc", ct: "application/msword", builtin: true, enabled: true },
+	{ ext: "docx", ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", builtin: true, enabled: true },
+	{ ext: "epub", ct: "application/epub+zip", builtin: true, enabled: true },
+	{ ext: "pdf", ct: "application/pdf", builtin: true, enabled: true },
+	{ ext: "ppt", ct: "application/vnd.ms-powerpoint", builtin: true, enabled: true },
+	{ ext: "pptx", ct: "application/vnd.openxmlformats-officedocument.presentationml.presentation", builtin: true, enabled: true },
+	{ ext: "psd", ct: "application/vnd.adobe.photoshop", builtin: true, enabled: true },
+	{ ext: "rar", ct: "application/vnd.rar", builtin: true, enabled: true },
+	{ ext: "rtf", ct: "application/rtf", builtin: true, enabled: true },
+	{ ext: "xls", ct: "application/vnd.ms-excel", builtin: true, enabled: true },
+	{ ext: "xlsx", ct: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", builtin: true, enabled: true },
+	{ ext: "zip", ct: "application/zip", builtin: true, enabled: true },
+	{ ext: "7z", ct: "application/x-7z-compressed", builtin: true, enabled: true }
 ];
 
 // Update trueCT from storage
@@ -39,7 +40,9 @@ function updateCT(){
 				if (defaultCT !== undefined){
 					defaultCT.builtin = defaultCT.ct;	// is this legal?
 					defaultCT.ct = customCT[j].ct;
+					defaultCT.enabled = customCT[j].enabled || true;
 				} else {
+					if (!customCT[j].hasOwnProperty("enabled")) customCT[j].enabled = true;
 					trueCT.push(customCT[j]);
 				}
 			}
@@ -165,13 +168,22 @@ function fixCT(details) {
 		// fix the header
 		if (contentTypeHeader){
 			if (contentTypeHeader.value !== newCT.ct){
-				fixCTlog.enqueue({
-					time: Date.now(),
-					url: details.url + ' (' + details.type + ')',
-					extension: fileext,
-					action: 'C-T: Updated CT header from "' + contentTypeHeader.value + '" to "' + newCT.ct + '"' + cdaction
-				});
-				contentTypeHeader.value = newCT.ct;
+				if (newCT.enabled === true){
+					fixCTlog.enqueue({
+						time: Date.now(),
+						url: details.url + ' (' + details.type + ')',
+						extension: fileext,
+						action: 'C-T: Updated CT header from "' + contentTypeHeader.value + '" to "' + newCT.ct + '"' + cdaction
+					});
+					contentTypeHeader.value = newCT.ct;
+				} else {
+					fixCTlog.enqueue({
+						time: Date.now(),
+						url: details.url + ' (' + details.type + ')',
+						extension: fileext,
+						action: 'C-T: No Action - rule to update from "' + contentTypeHeader.value + '" to "' + newCT.ct + '" is disabled' + cdaction
+					});
+				}
 			} else {
 				fixCTlog.enqueue({
 					time: Date.now(),
@@ -325,13 +337,15 @@ function handleMessage(request, sender, sendResponse) {
 				customCT.push({
 					ext: oChange.ext, 
 					ct: oChange.ctype, 
-					builtin: false
+					builtin: false,
+					enabled: true
 				});
 				// push to trueCT
 				trueCT.push({
 					ext: oChange.ext, 
 					ct: oChange.ctype, 
-					builtin: false
+					builtin: false,
+					enabled: true
 				});
 				break;
 			case 'change':
@@ -364,7 +378,8 @@ function handleMessage(request, sender, sendResponse) {
 					customCT.push({
 						ext: oChange.ext, 
 						ct: oChange.ctype, 
-						builtin: false
+						builtin: false,
+						enabled: true
 					});
 					if (oTrueCT){
 						// modify ct in trueCT
@@ -377,7 +392,8 @@ function handleMessage(request, sender, sendResponse) {
 						trueCT.push({
 							ext: oChange.ext, 
 							ct: oChange.ctype, 
-							builtin: false
+							builtin: false,
+							enabled: true
 						});
 					}
 				}
@@ -399,6 +415,20 @@ function handleMessage(request, sender, sendResponse) {
 		}
 		//console.log('customCT after => ' + JSON.stringify(customCT));
 		//console.log('trueCT after => ' + JSON.stringify(trueCT));
+		browser.storage.local.set({userCT: customCT})
+			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
+	} else if ('statuschg' in request) {
+		// receive CT status change, store to customCT and commit to storage, update trueCT
+		var oChange = request['statuschg'];
+		if (customCT === undefined) customCT = [];
+		//console.log('oChange => ' + JSON.stringify(oChange));
+		// modify ct in customCT
+		var oCustCT = customCT.find( objCT => objCT.ext === oChange.ext );
+		if (oCustCT) oCustCT.enabled = oChange.newstatus;
+		// modify ct in trueCT
+		var oTrueCT = trueCT.find( objCT => objCT.ext === oChange.ext );
+		oTrueCT.enabled = oChange.newstatus;
+		// Update storage
 		browser.storage.local.set({userCT: customCT})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
 	}

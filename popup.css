@@ -1,12 +1,17 @@
 body {
 	background-color: #f2f2f2;
 	margin: 4px;
+	font-size: 16px;
 }
 h1 {
 	font-size: 1.25em;
 	margin: 0;
 	padding: 4px 8px;
 	background: #a8e8f8;
+}
+h2 {
+	font-size: 1.1em;
+	margin: 0.5em 0;
 }
 ul {
 	list-style-type: none;
@@ -19,7 +24,6 @@ ul li {
 	cursor: pointer;
 	background-color: #f8f8f8;
 	margin: 2px 0;
-	font-size: 1.1em;
 }
 ul li:hover {
 	background-color: #b8d8f8;
@@ -30,4 +34,75 @@ ul li ul li {
 }
 ul li ul li:hover {
 	background-color: #f8f8b8;
+}
+.hassubview {
+	position: relative;
+}
+.hassubview::after {
+	content: url(arrow-left.svg); /* chrome://browser/skin/arrow-left.svg */
+	position: absolute;
+	right: 0;
+	top: 3px;
+	transform: scale(-1);
+	opacity: 0.5;
+}
+.hassubview:hover::after {
+	opacity: 1.0;
+}
+.subview {
+	display: none;
+	padding: 0 4px;
+	margin-bottom: 4px;
+	min-height: 350px;
+	max-height: 700px;
+	overflow: auto;
+}
+.backtomain {
+	position: relative;
+	margin: 1px -4px;
+	padding: 3px 4px;
+	background-color: #b8d8f8;
+	text-align: right;
+	cursor: pointer;
+}
+.backtomain img {
+	opacity: 0.5;
+	vertical-align: sub;
+}
+.backtomain:hover img {
+	opacity: 1.0;
+}
+
+#subview1 table {
+	border: 1px solid #000;
+	width: 100%;
+}
+#subview1 thead tr {
+	color: white;
+	background-color: darkblue;
+}
+#subview1 tbody tr:nth-of-type(odd) {
+	background-color: #fff;
+}
+#subview1 tbody tr:nth-of-type(even) {
+	background-color: #a8e8f8;
+}
+#subview1 th, #subview1 td {
+	padding: 2px 6px;
+	text-align: left;
+}
+#subview1 td[status="on"] {
+	cursor: pointer;
+	background: url(img/on-status.png) center no-repeat;
+}
+#subview1 td[status="off"] {
+	cursor: pointer;
+	background: url(img/off-status.png) center no-repeat;
+}
+.customct {
+	color: #00f;
+}
+.credit {
+	font-size: 0.6em;
+	margin-bottom: 0;
 }

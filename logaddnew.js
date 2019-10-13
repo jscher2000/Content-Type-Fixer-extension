@@ -19,7 +19,7 @@ function refreshLog(blnClear){
 			var newTR = document.getElementById('newTR'), clone, row, cells;
 			for (var j=0; j<arrItems.length; j++){
 				clone = document.importNode(newTR.content, true);
-				console.log(clone);
+				//console.log(clone);
 				// Populate the template
 				row = clone.querySelector('tr');
 				if (arrItems[j].action.indexOf('N/A - ') != -1){
@@ -44,7 +44,7 @@ function refreshLog(blnClear){
 							cells[3].querySelector('button').textContent = 'Edit';
 						} else {
 							// Remove the Add button?? Not sure how we got here
-							console.log('WTF');
+							//console.log('WTF');
 							cells[3].querySelector('button').remove();
 						}
 					}
