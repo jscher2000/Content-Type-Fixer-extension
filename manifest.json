@@ -1,7 +1,7 @@
 {
 	"name": "Content-Type Fixer",
 	"description": "Override dumb Content-Type headers to fix download problems",
-	"version": "1.5",
+	"version": "1.6.2",
 	"manifest_version": 2,
 	"applications":{
 		"gecko": {
@@ -22,10 +22,11 @@
     ],
 	"browser_action": {
 		"browser_style": true,
-		"default_icon": {
-			"16": "icons/hammer-16-Zzzz.png",
-			"32": "icons/hammer-32-Zzzz.png"
-		},
-		"default_title": "Turn Content-Type Fixer ON"
+		"default_title": "Turn Content-Type Fixer ON",
+		"theme_icons": [{
+			"light": "icons/hammer-64-Zzzz-lightbg.png",
+			"dark": "icons/hammer-64-Zzzz.png",
+			"size": 64
+		}]
 	}
 }

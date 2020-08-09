@@ -1,10 +1,14 @@
 /* 
-  Copyright 2019. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2020. Jefferson "jscher2000" Scher. License: MPL-2.0.
   v0.2 - initial design; uses some code from https://github.com/samlh/display-inline (MIT)
   v0.3 - fix unquoted filename's (old ASP on IIS issue)
   v1.0 - log script actions while listening (not stored); adding/editing associations
   v1.1 - content-disposition override (initial support), autostart option
   v1.5 - ability to enable/disable individual Content-Type overrides
+  v1.6 - fix bug with saving enabled/disabled status of built-in content types, 
+         don't apply content-disposition: attachment to text/html unless user overrides,
+		 buttons with light background for dark themes
+  v1.6.1, v1.6.2 - bug fix for the bug fix
 */
 
 let nowlistening = false;
@@ -40,7 +44,8 @@ function updateCT(){
 				if (defaultCT !== undefined){
 					defaultCT.builtin = defaultCT.ct;	// is this legal?
 					defaultCT.ct = customCT[j].ct;
-					defaultCT.enabled = customCT[j].enabled || true;
+					if (customCT[j].enabled === false) defaultCT.enabled = false;
+					else defaultCT.enabled = true;
 				} else {
 					if (!customCT[j].hasOwnProperty("enabled")) customCT[j].enabled = true;
 					trueCT.push(customCT[j]);
@@ -55,7 +60,8 @@ updateCT();
 let oPrefs = {
 	intLogExpiration: 300,		// Seconds after which log entries expire (default to 5 minutes)
 	dispoAction: 'browser',		// Content-disposition: 'browser' (do not override), 'inline', 'attachment'
-	autostart: false			// Whether to start listening when the extension initializes
+	autostart: false,			// Whether to start listening when the extension initializes
+	excepthtml: true			// Don't override content-disposition on text/html
 };
 // Update oPrefs from storage
 function updatePref(){
@@ -74,14 +80,26 @@ function updatePref(){
 }
 updatePref();
 
+// Theme
+let iconsuffix = '';
+browser.theme.getCurrent().then((theme) => {
+	if (theme.colors && theme.colors.toolbar_field){
+	    var rgbarray = theme.colors.toolbar_field.replace(/rgb\(/, '').replace(/\)/, '').split(', ');
+		var luminance = (Math.max(parseInt(rgbarray[0]), parseInt(rgbarray[1]), parseInt(rgbarray[2])) + Math.min(parseInt(rgbarray[0]), parseInt(rgbarray[1]), parseInt(rgbarray[2]))) / 2;
+		if (luminance < 120) iconsuffix = '-lightbg';
+	}
+});
+
 /**** Fix Headers of Intercepted Responses ****/
-function fixCT(details) { 
+function fixCT(details) {
+	let serverCT = '';
 	// extract the Content-Type and Content-Disposition headers if present
 	let contentTypeHeader, contentDispositionHeader;
 	for (let header of details.responseHeaders) {
 		switch (header.name.toLowerCase()) {
 			case "content-type":
 				contentTypeHeader = header;
+				serverCT = contentTypeHeader.value;
 				break;
 			case "content-disposition":
 				contentDispositionHeader = header;
@@ -115,7 +133,7 @@ function fixCT(details) {
 				// console.log('filename from content-disposition => ' + filename);
 			} else {
 				console.log('sections[i]='+sections[1]);
-				if (oPrefs.dispoAction != 'browser'){
+				if (oPrefs.dispoAction == 'inline' || (oPrefs.dispoAction == 'attachment' && (serverCT != 'text/html' || oPrefs.excepthtml == false))){
 					if (sections[i].trim().toLowerCase() != oPrefs.dispoAction){
 						cdaction += '<br>C-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
 						sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
@@ -124,7 +142,7 @@ function fixCT(details) {
 			}
 		}
 		contentDispositionHeader.value = sections.join(';');
-	} else if (oPrefs.dispoAction == 'attachment'){
+	} else if (oPrefs.dispoAction == 'attachment' && (serverCT != 'text/html' || oPrefs.excepthtml == false)){
 		// TODO Should we limit this by content type??
 		details.responseHeaders.push({ name: 'Content-Disposition', value: 'attachment' });
 		cdaction = '<br>C-D: Forced to attachment';
@@ -255,16 +273,14 @@ function setButton(){
 	if (nowlistening){
 		browser.browserAction.setIcon({
 			path: {
-				16: "icons/hammer-16-star.png",
-				32: "icons/hammer-32-star.png"
+				64: "icons/hammer-64-star" + iconsuffix + ".png"
 			}
 		});
 		browser.browserAction.setTitle({title: 'Turn Content-Type Fixer OFF or Add/Edit Content Types'});
 	} else {
 		browser.browserAction.setIcon({
 			path: {
-				16: "icons/hammer-16-Zzzz.png",
-				32: "icons/hammer-32-Zzzz.png"
+				64: "icons/hammer-64-Zzzz" + iconsuffix + ".png"
 			}
 		});
 		browser.browserAction.setTitle({title: 'Turn Content-Type Fixer ON'});
@@ -387,7 +403,8 @@ function handleMessage(request, sender, sendResponse) {
 							oTrueCT.builtin = oTrueCT.ct;
 							oTrueCT.builtin = false;
 						}
-						oTrueCT.ct = oChange.ctype;					} else {
+						oTrueCT.ct = oChange.ctype;
+					} else {
 						// add to trueCT (this shouldn't happen?)
 						trueCT.push({
 							ext: oChange.ext, 
@@ -422,12 +439,21 @@ function handleMessage(request, sender, sendResponse) {
 		var oChange = request['statuschg'];
 		if (customCT === undefined) customCT = [];
 		//console.log('oChange => ' + JSON.stringify(oChange));
-		// modify ct in customCT
-		var oCustCT = customCT.find( objCT => objCT.ext === oChange.ext );
-		if (oCustCT) oCustCT.enabled = oChange.newstatus;
 		// modify ct in trueCT
 		var oTrueCT = trueCT.find( objCT => objCT.ext === oChange.ext );
 		oTrueCT.enabled = oChange.newstatus;
+		// modify ct in customCT
+		var oCustCT = customCT.find( objCT => objCT.ext === oChange.ext );
+		if (oCustCT){ // update record
+			oCustCT.enabled = oChange.newstatus;
+		} else {	  // add record (version 1.6)
+			customCT.push({
+				ext: oTrueCT.ext, 
+				ct: oTrueCT.ct, 
+				builtin: oTrueCT.builtin,
+				enabled: oChange.newstatus
+			});
+		}
 		// Update storage
 		browser.storage.local.set({userCT: customCT})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});

@@ -1,8 +1,9 @@
 /* 
-  Copyright 2019. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2020. Jefferson "jscher2000" Scher. License: MPL-2.0.
   v1.0 - added drop-down menu for the toolbar button
   v1.1 - added content-disposition and autostart options
   v1.5 - support enable/disable of individual Content-Type overrides
+  v1.6 - don't apply content-disposition: attachment to text/html unless user overrides
 */
 
 /**** Form setup ****/
@@ -14,6 +15,7 @@ function getPrefs(){
 		oPrefs = oBGprefs.prefs;
 		document.querySelector('#cd' + oPrefs.dispoAction + ' > span').textContent = '☑';
 		if (oPrefs.autostart === true) document.querySelector('#autostart > span').textContent = '☑';
+		if (oPrefs.excepthtml === true) document.querySelector('#dispohtml > span').textContent = '☑';
 	}).catch((err) => {
 		console.log('Problem getting oPrefs: ' + err.message);
 	});
@@ -67,6 +69,19 @@ function refreshCTtable(){
 
 function menuClick(evt){
 	var tgt = evt.target;
+	if (tgt.id == 'dispohtml' || tgt.parentNode.id == 'dispohtml'){
+		// Toggle value
+		oPrefs.excepthtml = !(oPrefs.excepthtml);
+		// Send new oPrefs off to the background script
+		updatePref();
+		if (tgt.id != 'dispohtml') tgt = tgt.parentNode;
+		if (oPrefs.excepthtml === true){
+			tgt.querySelector('span').textContent = '☑';
+		} else {
+			tgt.querySelector('span').textContent = '☐';
+		}
+		return;
+	}
 	if (tgt.nodeName == 'SPAN') tgt = tgt.closest('li');
 	if (tgt.id == 'dispo') return; // no-op
 	if (tgt.id == 'autostart'){
@@ -87,7 +102,7 @@ function menuClick(evt){
 			// Send new oPrefs off to the background script
 			updatePref();
 			// Update the popup
-			var list = tgt.closest('ul').querySelectorAll('li');
+			var list = tgt.closest('ul').querySelectorAll('li[id^="cd"]');
 			for (var i=0; i<list.length; i++){
 				if (list[i] == tgt){
 					list[i].querySelector('span').textContent = '☑';

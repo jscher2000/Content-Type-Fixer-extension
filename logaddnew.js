@@ -1,5 +1,5 @@
 /* 
-  Copyright 2019. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2020. Jefferson "jscher2000" Scher. License: MPL-2.0.
   v1.0 - added log and add/edit features for customizing content types
   v1.1 - minor fixes; use template to reduce insertAdjacentHTML
 */
