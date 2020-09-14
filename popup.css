@@ -35,6 +35,9 @@ ul li ul li {
 #dispohtml {
 	padding-left: 20px;
 }
+#typehtml {
+	padding-left: 15px;
+}
 ul li ul li:hover {
 	background-color: #f8f8b8;
 }

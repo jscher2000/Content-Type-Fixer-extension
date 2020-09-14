@@ -9,6 +9,7 @@
          don't apply content-disposition: attachment to text/html unless user overrides,
 		 buttons with light background for dark themes
   v1.6.1, v1.6.2 - bug fix for the bug fix
+  v1.7 - don't apply content-type changes to text/html unless user overrides
 */
 
 let nowlistening = false;
@@ -61,7 +62,8 @@ let oPrefs = {
 	intLogExpiration: 300,		// Seconds after which log entries expire (default to 5 minutes)
 	dispoAction: 'browser',		// Content-disposition: 'browser' (do not override), 'inline', 'attachment'
 	autostart: false,			// Whether to start listening when the extension initializes
-	excepthtml: true			// Don't override content-disposition on text/html
+	excepthtml: true,			// Don't override content-disposition on text/html
+	ctexcepthtml: true			// Don't override content-type on text/html
 };
 // Update oPrefs from storage
 function updatePref(){
@@ -133,7 +135,7 @@ function fixCT(details) {
 				// console.log('filename from content-disposition => ' + filename);
 			} else {
 				console.log('sections[i]='+sections[1]);
-				if (oPrefs.dispoAction == 'inline' || (oPrefs.dispoAction == 'attachment' && (serverCT != 'text/html' || oPrefs.excepthtml == false))){
+				if (oPrefs.dispoAction == 'inline' || (oPrefs.dispoAction == 'attachment' && (serverCT.indexOf('text/html') == -1 || oPrefs.excepthtml == false))){
 					if (sections[i].trim().toLowerCase() != oPrefs.dispoAction){
 						cdaction += '<br>C-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
 						sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
@@ -142,7 +144,7 @@ function fixCT(details) {
 			}
 		}
 		contentDispositionHeader.value = sections.join(';');
-	} else if (oPrefs.dispoAction == 'attachment' && (serverCT != 'text/html' || oPrefs.excepthtml == false)){
+	} else if (oPrefs.dispoAction == 'attachment' && (serverCT.indexOf('text/html') == -1 || oPrefs.excepthtml == false)){
 		// TODO Should we limit this by content type??
 		details.responseHeaders.push({ name: 'Content-Disposition', value: 'attachment' });
 		cdaction = '<br>C-D: Forced to attachment';
@@ -186,21 +188,30 @@ function fixCT(details) {
 		// fix the header
 		if (contentTypeHeader){
 			if (contentTypeHeader.value !== newCT.ct){
-				if (newCT.enabled === true){
+				if (serverCT.indexOf('text/html') == -1 || oPrefs.ctexcepthtml == false){
+					if (newCT.enabled === true){
+						fixCTlog.enqueue({
+							time: Date.now(),
+							url: details.url + ' (' + details.type + ')',
+							extension: fileext,
+							action: 'C-T: Updated CT header from "' + contentTypeHeader.value + '" to "' + newCT.ct + '"' + cdaction
+						});
+						contentTypeHeader.value = newCT.ct;
+					} else {
+						fixCTlog.enqueue({
+							time: Date.now(),
+							url: details.url + ' (' + details.type + ')',
+							extension: fileext,
+							action: 'C-T: No Action - rule to update from "' + contentTypeHeader.value + '" to "' + newCT.ct + '" is disabled' + cdaction
+						});
+					}
+				} else { // text/html, presumably
 					fixCTlog.enqueue({
 						time: Date.now(),
 						url: details.url + ' (' + details.type + ')',
 						extension: fileext,
-						action: 'C-T: Updated CT header from "' + contentTypeHeader.value + '" to "' + newCT.ct + '"' + cdaction
-					});
-					contentTypeHeader.value = newCT.ct;
-				} else {
-					fixCTlog.enqueue({
-						time: Date.now(),
-						url: details.url + ' (' + details.type + ')',
-						extension: fileext,
-						action: 'C-T: No Action - rule to update from "' + contentTypeHeader.value + '" to "' + newCT.ct + '" is disabled' + cdaction
-					});
+						action: 'C-T: No Action - not overriding "' + contentTypeHeader.value + '" to "' + newCT.ct + '" (because HTML)' + cdaction
+					});					
 				}
 			} else {
 				fixCTlog.enqueue({

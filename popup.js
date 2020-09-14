@@ -4,6 +4,7 @@
   v1.1 - added content-disposition and autostart options
   v1.5 - support enable/disable of individual Content-Type overrides
   v1.6 - don't apply content-disposition: attachment to text/html unless user overrides
+  v1.7 - don't apply content-type changes to text/html unless user overrides
 */
 
 /**** Form setup ****/
@@ -16,6 +17,7 @@ function getPrefs(){
 		document.querySelector('#cd' + oPrefs.dispoAction + ' > span').textContent = '☑';
 		if (oPrefs.autostart === true) document.querySelector('#autostart > span').textContent = '☑';
 		if (oPrefs.excepthtml === true) document.querySelector('#dispohtml > span').textContent = '☑';
+		if (oPrefs.ctexcepthtml === true) document.querySelector('#typehtml > span').textContent = '☑';
 	}).catch((err) => {
 		console.log('Problem getting oPrefs: ' + err.message);
 	});
@@ -76,6 +78,19 @@ function menuClick(evt){
 		updatePref();
 		if (tgt.id != 'dispohtml') tgt = tgt.parentNode;
 		if (oPrefs.excepthtml === true){
+			tgt.querySelector('span').textContent = '☑';
+		} else {
+			tgt.querySelector('span').textContent = '☐';
+		}
+		return;
+	}
+	if (tgt.id == 'typehtml' || tgt.parentNode.id == 'typehtml'){
+		// Toggle value
+		oPrefs.ctexcepthtml = !(oPrefs.ctexcepthtml);
+		// Send new oPrefs off to the background script
+		updatePref();
+		if (tgt.id != 'typehtml') tgt = tgt.parentNode;
+		if (oPrefs.ctexcepthtml === true){
 			tgt.querySelector('span').textContent = '☑';
 		} else {
 			tgt.querySelector('span').textContent = '☐';
