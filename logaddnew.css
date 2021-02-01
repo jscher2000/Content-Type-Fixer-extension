@@ -43,3 +43,7 @@ h2 {
 	background: #f88;
 	padding: 2px 8px;
 }
+/* v1.7.1 (honor \n) */
+td:nth-of-type(4) > span:nth-of-type(1) {
+	white-space: pre-wrap;
+}

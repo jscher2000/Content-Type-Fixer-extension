@@ -1,5 +1,5 @@
 /* 
-  Copyright 2020. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2021. Jefferson "jscher2000" Scher. License: MPL-2.0.
   v0.2 - initial design; uses some code from https://github.com/samlh/display-inline (MIT)
   v0.3 - fix unquoted filename's (old ASP on IIS issue)
   v1.0 - log script actions while listening (not stored); adding/editing associations
@@ -10,6 +10,7 @@
 		 buttons with light background for dark themes
   v1.6.1, v1.6.2 - bug fix for the bug fix
   v1.7 - don't apply content-type changes to text/html unless user overrides
+  v1.7.1 - Google Drive / Gmail attachment exception re Content-Disposition for Firefox 85
 */
 
 let nowlistening = false;
@@ -127,18 +128,23 @@ function fixCT(details) {
 				if (filename.endsWith('"')) filename = filename.slice(0, -1);
 				else if (filename.indexOf(' ') > -1) { 
 					// quote the filename (fix for bad IIS ASP code)
-					cdaction += '<br>C-D: Filename quoted due to spaces';
+					cdaction += '\nC-D: Filename quoted due to spaces';
 					if (filename.startsWith('"')) parts[1] = parts[1].replace(filename, filename + '"');
 					else parts[1] = parts[1].replace(filename, '"' + filename + '"');
 					sections[i] = parts.join('=');
 				}
 				// console.log('filename from content-disposition => ' + filename);
 			} else {
-				console.log('sections[i]='+sections[1]);
 				if (oPrefs.dispoAction == 'inline' || (oPrefs.dispoAction == 'attachment' && (serverCT.indexOf('text/html') == -1 || oPrefs.excepthtml == false))){
 					if (sections[i].trim().toLowerCase() != oPrefs.dispoAction){
-						cdaction += '<br>C-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
-						sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
+						// Check for Google Drive/Gmail Exception v1.7.1
+						if (oPrefs.dispoAction == 'inline' && details.type == 'sub_frame' && details.url.indexOf('googleusercontent.com') > -1 &&
+								((details.documentUrl.indexOf('mail.google.com') > -1) || (details.documentUrl.indexOf('drive.google.com') > -1))){
+							cdaction += '\nC-D: Not changed from ' + sections[i] + ' due to Google Drive/Gmail attachment exception (retrieving from googleusercontent.com triggered from ' + details.documentUrl + ')';
+						} else {
+							cdaction += '\nC-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
+							sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
+						}
 					}
 				}
 			}
@@ -147,7 +153,7 @@ function fixCT(details) {
 	} else if (oPrefs.dispoAction == 'attachment' && (serverCT.indexOf('text/html') == -1 || oPrefs.excepthtml == false)){
 		// TODO Should we limit this by content type??
 		details.responseHeaders.push({ name: 'Content-Disposition', value: 'attachment' });
-		cdaction = '<br>C-D: Forced to attachment';
+		cdaction = '\nC-D: Forced to attachment';
 	}
 	// if there's no discernible file name or file extension, exit now
 	if (filename === '' || filename.lastIndexOf('.') < 0){
