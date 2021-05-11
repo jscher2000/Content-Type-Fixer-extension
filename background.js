@@ -11,6 +11,7 @@
   v1.6.1, v1.6.2 - bug fix for the bug fix
   v1.7 - don't apply content-type changes to text/html unless user overrides
   v1.7.1 - Google Drive / Gmail attachment exception re Content-Disposition for Firefox 85
+  v1.7.2 - Google Docs download exception re Content-Disposition
 */
 
 let nowlistening = false;
@@ -137,10 +138,10 @@ function fixCT(details) {
 			} else {
 				if (oPrefs.dispoAction == 'inline' || (oPrefs.dispoAction == 'attachment' && (serverCT.indexOf('text/html') == -1 || oPrefs.excepthtml == false))){
 					if (sections[i].trim().toLowerCase() != oPrefs.dispoAction){
-						// Check for Google Drive/Gmail Exception v1.7.1
+						// Check for Google Drive/Gmail Exception v1.7.1 / Google Docs Exception v1.7.2
 						if (oPrefs.dispoAction == 'inline' && details.type == 'sub_frame' && details.url.indexOf('googleusercontent.com') > -1 &&
-								((details.documentUrl.indexOf('mail.google.com') > -1) || (details.documentUrl.indexOf('drive.google.com') > -1))){
-							cdaction += '\nC-D: Not changed from ' + sections[i] + ' due to Google Drive/Gmail attachment exception (retrieving from googleusercontent.com triggered from ' + details.documentUrl + ')';
+								((details.documentUrl.indexOf('mail.google.com') > -1) || (details.documentUrl.indexOf('drive.google.com') > -1) || (details.documentUrl.indexOf('docs.google.com') > -1))){
+							cdaction += '\nC-D: Not changed from ' + sections[i] + ' due to Google Drive/Gmail/Docs attachment exception (retrieving from googleusercontent.com triggered from ' + details.documentUrl + ')';
 						} else {
 							cdaction += '\nC-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
 							sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
