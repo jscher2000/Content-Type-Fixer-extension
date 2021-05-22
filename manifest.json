@@ -1,7 +1,7 @@
 {
 	"name": "Content-Type Fixer",
 	"description": "Override dumb Content-Type headers to fix download problems, and downloading forced by Content-Disposition: attachment.",
-	"version": "1.7.2",
+	"version": "1.7.3",
 	"manifest_version": 2,
 	"applications":{
 		"gecko": {

@@ -12,6 +12,7 @@
   v1.7 - don't apply content-type changes to text/html unless user overrides
   v1.7.1 - Google Drive / Gmail attachment exception re Content-Disposition for Firefox 85
   v1.7.2 - Google Docs download exception re Content-Disposition
+  v1.7.3 - Avoid Content-Disposition modifications with response status codes != 200
 */
 
 let nowlistening = false;
@@ -143,8 +144,12 @@ function fixCT(details) {
 								((details.documentUrl.indexOf('mail.google.com') > -1) || (details.documentUrl.indexOf('drive.google.com') > -1) || (details.documentUrl.indexOf('docs.google.com') > -1))){
 							cdaction += '\nC-D: Not changed from ' + sections[i] + ' due to Google Drive/Gmail/Docs attachment exception (retrieving from googleusercontent.com triggered from ' + details.documentUrl + ')';
 						} else {
-							cdaction += '\nC-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
-							sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
+							if (details.statusCode == 200){ // updated 1.7.3
+								cdaction += '\nC-D: Changed from ' + sections[i] + ' to ' + oPrefs.dispoAction;
+								sections[i] = sections[i].replace(/inline|attachment/i, oPrefs.dispoAction);
+							} else {
+								cdaction += '\nC-D: Not changed from ' + sections[i] + ' due to statusCode ' + details.statusCode;
+							}
 						}
 					}
 				}
@@ -153,8 +158,12 @@ function fixCT(details) {
 		contentDispositionHeader.value = sections.join(';');
 	} else if (oPrefs.dispoAction == 'attachment' && (serverCT.indexOf('text/html') == -1 || oPrefs.excepthtml == false)){
 		// TODO Should we limit this by content type??
-		details.responseHeaders.push({ name: 'Content-Disposition', value: 'attachment' });
-		cdaction = '\nC-D: Forced to attachment';
+		if (details.statusCode == 200){ // updated 1.7.3
+			details.responseHeaders.push({ name: 'Content-Disposition', value: 'attachment' });
+			cdaction = '\nC-D: Forced to attachment';
+		} else {
+			cdaction += '\nC-D: Not forced to attachment due to statusCode ' + details.statusCode;
+		}
 	}
 	// if there's no discernible file name or file extension, exit now
 	if (filename === '' || filename.lastIndexOf('.') < 0){
@@ -168,6 +177,7 @@ function fixCT(details) {
 	}
 	
 	let fileext = filename.substr(filename.lastIndexOf('.')+1);
+
 	if (details.statusCode == 200){
 		// check file extension for known content-type
 		let newCT = trueCT.find( objCT => objCT.ext === fileext );
