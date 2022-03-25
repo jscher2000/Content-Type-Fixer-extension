@@ -1,5 +1,5 @@
 /* 
-  Copyright 2021. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2022. Jefferson "jscher2000" Scher. License: MPL-2.0.
   v0.2 - initial design; uses some code from https://github.com/samlh/display-inline (MIT)
   v0.3 - fix unquoted filename's (old ASP on IIS issue)
   v1.0 - log script actions while listening (not stored); adding/editing associations
@@ -13,6 +13,7 @@
   v1.7.1 - Google Drive / Gmail attachment exception re Content-Disposition for Firefox 85
   v1.7.2 - Google Docs download exception re Content-Disposition
   v1.7.3 - Avoid Content-Disposition modifications with response status codes != 200
+  v1.7.4 - Some additional default content-type entries
 */
 
 let nowlistening = false;
@@ -22,19 +23,26 @@ let fixCTlog = {};
 // Default starting values
 let trueCT = [
 	{ ext: "acsm", ct: "application/vnd.adobe.adept+xml", builtin: true, enabled: true },
-	{ ext: "doc", ct: "application/msword", builtin: true, enabled: true },
+	{ ext: "doc",  ct: "application/msword", builtin: true, enabled: true },
 	{ ext: "docx", ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", builtin: true, enabled: true },
 	{ ext: "epub", ct: "application/epub+zip", builtin: true, enabled: true },
-	{ ext: "pdf", ct: "application/pdf", builtin: true, enabled: true },
-	{ ext: "ppt", ct: "application/vnd.ms-powerpoint", builtin: true, enabled: true },
+	{ ext: "pdf",  ct: "application/pdf", builtin: true, enabled: true },
+	{ ext: "ppt",  ct: "application/vnd.ms-powerpoint", builtin: true, enabled: true },
 	{ ext: "pptx", ct: "application/vnd.openxmlformats-officedocument.presentationml.presentation", builtin: true, enabled: true },
-	{ ext: "psd", ct: "application/vnd.adobe.photoshop", builtin: true, enabled: true },
-	{ ext: "rar", ct: "application/vnd.rar", builtin: true, enabled: true },
-	{ ext: "rtf", ct: "application/rtf", builtin: true, enabled: true },
-	{ ext: "xls", ct: "application/vnd.ms-excel", builtin: true, enabled: true },
+	{ ext: "psd",  ct: "application/vnd.adobe.photoshop", builtin: true, enabled: true },
+	{ ext: "rar",  ct: "application/vnd.rar", builtin: true, enabled: true },
+	{ ext: "rtf",  ct: "application/rtf", builtin: true, enabled: true },
+	{ ext: "xls",  ct: "application/vnd.ms-excel", builtin: true, enabled: true },
 	{ ext: "xlsx", ct: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", builtin: true, enabled: true },
-	{ ext: "zip", ct: "application/zip", builtin: true, enabled: true },
-	{ ext: "7z", ct: "application/x-7z-compressed", builtin: true, enabled: true }
+	{ ext: "zip",  ct: "application/zip", builtin: true, enabled: true },
+	{ ext: "7z",   ct: "application/x-7z-compressed", builtin: true, enabled: true },
+	{ ext: "css",  ct: "text/css", builtin: true, enabled: true },
+	{ ext: "csv",  ct: "text/csv", builtin: true, enabled: true },
+	{ ext: "jpg",  ct: "image/jpeg", builtin: true, enabled: false },
+	{ ext: "png",  ct: "image/png", builtin: true, enabled: false },
+	{ ext: "flv",  ct: "video/x-flv", builtin: true, enabled: false },
+	{ ext: "mp4",  ct: "video/mp4", builtin: true, enabled: false },
+	{ ext: "swf",  ct: "application/x-shockwave-flash", builtin: true, enabled: false }
 ];
 
 // Update trueCT from storage
