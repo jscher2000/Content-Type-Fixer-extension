@@ -1,3 +1,4 @@
+/* v1.7.4.1 */
 body {
 	background-color: #f2f2f2;
 	margin: 4px;
@@ -60,8 +61,6 @@ ul li ul li:hover {
 	padding: 0 4px;
 	margin-bottom: 4px;
 	min-height: 350px;
-	max-height: 700px;
-	overflow: auto;
 }
 .backtomain {
 	position: relative;
